@@ -243,7 +243,7 @@ npm install
 
 3. Start development server
 ```bash
-npm start
+npm run dev
 ```
 
 ## 🏗 AWS Deployment

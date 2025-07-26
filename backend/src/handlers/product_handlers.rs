@@ -1,6 +1,7 @@
 // handlers/product_handlers.rs
 use actix_identity::Identity;
 use actix_web::{web, HttpResponse};
+use bigdecimal::BigDecimal;
 use serde_json::json;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -115,6 +116,16 @@ pub async fn create_product(
     pool: web::Data<PgPool>,
     req: web::Json<CreateProductRequest>,
 ) -> AppResult<HttpResponse> {
+    if req.name.trim().is_empty() {
+        return Err(AppError::BadRequest("Invalid product name".to_string()));
+    }
+    if req.price_per_unit <= BigDecimal::from(0) {
+        return Err(AppError::BadRequest("Invalid product price".to_string()));
+    }
+    if req.stock_qty < 0 {
+        return Err(AppError::BadRequest("Invalid stock quantity".to_string()));
+    }
+
     let user_id = get_user_id(&identity)?;
 
     // Check if user is a supplier

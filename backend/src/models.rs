@@ -87,6 +87,7 @@ pub struct Order {
 // Order status enum
 #[derive(Debug, Serialize, Deserialize, sqlx::Type, Clone)]
 #[sqlx(type_name = "order_status", rename_all = "lowercase")]
+#[serde(rename_all = "lowercase")]
 pub enum OrderStatus {
     Pending,
     Shipped,
@@ -211,6 +212,11 @@ pub struct AddToCartRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct RemoveFromCartRequest {
+    pub product_id: Uuid,
+    pub quantity: Option<i32>,
+}
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateOrderStatusRequest {
     pub status: OrderStatus,
 }

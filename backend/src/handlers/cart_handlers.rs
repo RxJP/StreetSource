@@ -8,14 +8,18 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::errors::{AppError, AppResult};
-use crate::models::{AddToCartRequest, CartItem};
+use crate::models::{AddToCartRequest, CartItem, RemoveFromCartRequest};
 
 const CART_SESSION_KEY: &str = "cart";
 
 pub async fn get_cart(
+    identity: Identity,
     session: Session,
     pool: web::Data<PgPool>,
 ) -> AppResult<HttpResponse> {
+    if identity.id().is_err() {
+        return Err(AppError::Unauthorized);
+    }
     // Get cart from session
     let cart_items: Vec<CartItem> = session
         .get::<Vec<CartItem>>(CART_SESSION_KEY)
@@ -120,7 +124,7 @@ pub async fn add_to_cart(
 pub async fn remove_from_cart(
     _identity: Identity,
     session: Session,
-    req: web::Json<AddToCartRequest>, // Reusing same struct
+    req: web::Json<RemoveFromCartRequest>, // Reusing same struct
 ) -> AppResult<HttpResponse> {
     // Get current cart
     let mut cart_items: Vec<CartItem> = session
@@ -128,8 +132,25 @@ pub async fn remove_from_cart(
         .expect("Failed to get cart from session")
         .unwrap_or_default();
 
-    // Remove item from cart
-    cart_items.retain(|item| item.product_id != req.product_id);
+    if req.quantity.is_none() {
+        // Remove item from cart
+        cart_items.retain(|item| item.product_id != req.product_id);
+    }
+    else {
+        // Update quantity if item exists
+        if let Some(item) = cart_items.iter_mut().find(|item| item.product_id == req.product_id) {
+            if let Some(quantity) = req.quantity {
+                if item.quantity > quantity {
+                    item.quantity -= quantity;
+                } else {
+                    // If quantity is more than available, remove the item
+                    cart_items.retain(|i| i.product_id != req.product_id);
+                }
+            }
+        } else {
+            return Err(AppError::NotFound("Item not found in cart".to_string()));
+        }
+    }
 
     // Save cart back to session
     session.insert(CART_SESSION_KEY, &cart_items)

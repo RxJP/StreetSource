@@ -14,7 +14,7 @@ use uuid::Uuid;
 use crate::errors::{AppError, AppResult};
 use crate::utils::get_user_id;
 
-const MAX_FILE_SIZE: usize = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE: usize = 5 * 1024 * 1024; // 5 MB
 const ALLOWED_IMAGE_EXTENSIONS: &[&str] = &["jpg", "jpeg", "png", "webp"];
 
 pub async fn upload_profile_image(
@@ -39,7 +39,7 @@ pub async fn upload_profile_image(
                 // Read file data
                 while let Some(chunk) = field.try_next().await.expect("Failed to read file chunk from multipart field") {
                     if file_data.len() + chunk.len() > MAX_FILE_SIZE {
-                        return Err(AppError::BadRequest("File size exceeds 10MB limit".to_string()));
+                        return Err(AppError::BadRequest("File size exceeds 5MB limit".to_string()));
                     }
                     file_data.extend_from_slice(&chunk);
                 }

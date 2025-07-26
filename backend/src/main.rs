@@ -5,6 +5,7 @@ use actix_web::cookie::Key;
 use dotenv::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use std::env;
+use log::Level;
 
 mod auth;
 mod models;
@@ -95,11 +96,11 @@ async fn main() -> std::io::Result<()> {
                     // Upload routes
                     .route("/upload/profile", web::post().to(handlers::upload_handlers::upload_profile_image))
                     .route("/upload/product", web::post().to(handlers::upload_handlers::upload_product_image))
-                    //Health Check route
-                    .route("/health", web::get().to(handlers::health_handler::health_check))
             )
             // WebSocket endpoint
             .route("/ws/messages", web::get().to(ws::websocket_handler))
+            //Health Check endpoint
+            .route("/health", web::get().to(handlers::health_handler::health_check))
     })
         .bind(&server_address)?
         .run()
