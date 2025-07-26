@@ -1,0 +1,221 @@
+import React from 'react';
+import { Plus, Package, DollarSign, Star, ShoppingBag } from 'lucide-react';
+import type { User } from '../../types';
+
+interface SellerDashboardProps {
+  user: User | null;
+  setCurrentPage: (page: string) => void;
+  setShowAuthModal: (show: boolean) => void;
+}
+
+export const SellerDashboard: React.FC<SellerDashboardProps> = ({
+  user,
+  setCurrentPage,
+  setShowAuthModal
+}) => {
+  const mockStats = {
+    activeListings: 12,
+    totalSales: 45670,
+    averageRating: 4.7,
+    totalOrders: 156
+  };
+
+  const mockPendingOrders = [
+    {
+      id: '1',
+      buyer_name: 'Street Food Corner',
+      buyer_phone: '+91 98765 43210',
+      total_price: 850.00,
+      created_at: '2024-01-20T09:30:00Z',
+      items: [
+        { product_name: 'Premium Basmati Rice', quantity: 10, unit_price: 85.00 }
+      ]
+    }
+  ];
+
+  if (!user || !user.is_supplier) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Access Denied</h2>
+          <p className="text-gray-600 mb-6">Only suppliers can access this dashboard</p>
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg"
+          >
+            Login as Supplier
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-800">Seller Dashboard</h1>
+          <button
+            onClick={() => setCurrentPage('add-product')}
+            className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Add Product
+          </button>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Active Products</p>
+                <p className="text-2xl font-bold text-gray-900">{mockStats.activeListings}</p>
+              </div>
+              <Package className="w-8 h-8 text-blue-500" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Sales</p>
+                <p className="text-2xl font-bold text-gray-900">₹{mockStats.totalSales.toLocaleString()}</p>
+              </div>
+              <DollarSign className="w-8 h-8 text-green-500" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Average Rating</p>
+                <p className="text-2xl font-bold text-gray-900">{mockStats.averageRating}</p>
+              </div>
+              <Star className="w-8 h-8 text-yellow-500" />
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Orders</p>
+                <p className="text-2xl font-bold text-gray-900">{mockStats.totalOrders}</p>
+              </div>
+              <ShoppingBag className="w-8 h-8 text-purple-500" />
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <button
+            onClick={() => setCurrentPage('add-product')}
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-all text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <Plus className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800">Add New Product</h3>
+                <p className="text-sm text-gray-600">List a new product for sale</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setCurrentPage('my-products')}
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-all text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Package className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800">Manage Products</h3>
+                <p className="text-sm text-gray-600">Edit or remove your listings</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setCurrentPage('orders')}
+            className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-all text-left"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <ShoppingBag className="w-6 h-6 text-orange-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-800">View Orders</h3>
+                <p className="text-sm text-gray-600">Check pending and completed orders</p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* Pending Orders */}
+        <div className="bg-white rounded-lg shadow-md">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-800">Pending Orders</h2>
+          </div>
+          <div className="p-6">
+            {mockPendingOrders.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">No pending orders</p>
+            ) : (
+              <div className="space-y-4">
+                {mockPendingOrders.map(order => (
+                  <div key={order.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="font-semibold text-gray-800">Order #{order.id}</h3>
+                        <p className="text-sm text-gray-600">
+                          From: {order.buyer_name}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Phone: {order.buyer_phone}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {new Date(order.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-gray-800">₹{order.total_price}</p>
+                        <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                          Pending
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="border-t pt-4">
+                      {order.items.map((item, index) => (
+                        <div key={index} className="flex justify-between items-center">
+                          <span className="text-sm text-gray-800">
+                            {item.product_name} × {item.quantity}
+                          </span>
+                          <span className="text-sm font-medium">
+                            ₹{(item.quantity * item.unit_price).toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="flex gap-2 mt-4">
+                      <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+                        Accept Order
+                      </button>
+                      <button className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm">
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
