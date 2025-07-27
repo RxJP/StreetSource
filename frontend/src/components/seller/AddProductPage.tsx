@@ -96,7 +96,7 @@ export const AddProductPage: React.FC<AddProductPageProps> = ({
                 required
                 value={productData.name}
                 onChange={(e) => setProductData({...productData, name: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full border text-grey-600 border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 text-black"
               />
             </div>
 
@@ -106,7 +106,7 @@ export const AddProductPage: React.FC<AddProductPageProps> = ({
                 value={productData.description}
                 onChange={(e) => setProductData({...productData, description: e.target.value})}
                 rows={4}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 text-black"
               />
             </div>
 
@@ -119,7 +119,7 @@ export const AddProductPage: React.FC<AddProductPageProps> = ({
                   required
                   value={productData.price_per_unit}
                   onChange={(e) => setProductData({...productData, price_per_unit: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 text-black"
                 />
               </div>
 
@@ -130,7 +130,7 @@ export const AddProductPage: React.FC<AddProductPageProps> = ({
                   required
                   value={productData.stock_qty}
                   onChange={(e) => setProductData({...productData, stock_qty: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 text-black"
                 />
               </div>
             </div>
@@ -141,7 +141,7 @@ export const AddProductPage: React.FC<AddProductPageProps> = ({
                 required
                 value={productData.category_id}
                 onChange={(e) => setProductData({...productData, category_id: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 text-black"
               >
                 <option value="">Select Category</option>
                 {mockCategories.map(category => (
@@ -156,7 +156,7 @@ export const AddProductPage: React.FC<AddProductPageProps> = ({
                 type="url"
                 value={productData.image_url}
                 onChange={(e) => setProductData({...productData, image_url: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-300 text-black"
                 placeholder="https://example.com/image.jpg"
               />
             </div>

@@ -194,8 +194,8 @@ const StreetSourceApp: React.FC = () => {
       <footer className="bg-slate-800 text-white py-8 mt-16">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <Package className="w-8 h-8 text-orange-500" />
-            <h3 className="text-2xl font-bold text-orange-500">StreetSource</h3>
+            <Package className="w-8 h-8 text-orange-400" />
+            <h3 className="text-2xl font-bold text-orange-400">StreetSource</h3>
           </div>
           <p className="text-gray-400">
             © 2024 StreetSource. Empowering street food vendors with quality ingredients.

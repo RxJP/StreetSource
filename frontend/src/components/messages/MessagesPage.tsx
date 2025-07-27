@@ -172,7 +172,7 @@ export const MessagesPage: React.FC<MessagesPageProps> = ({
                       <div
                         className={`max-w-xs px-4 py-2 rounded-lg ${
                           message.sender_name === 'You'
-                            ? 'bg-orange-500 text-white'
+                            ? 'bg-orange-400 text-white'
                             : message.type === 'offer'
                             ? 'bg-blue-100 text-blue-800 border-2 border-blue-300'
                             : 'bg-gray-200 text-gray-800'
@@ -204,11 +204,11 @@ export const MessagesPage: React.FC<MessagesPageProps> = ({
                       onChange={(e) => setMessageText(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                       placeholder="Type a message..."
-                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400"
                     />
                     <button
                       onClick={sendMessage}
-                      className="bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-lg"
+                      className="bg-orange-300 hover:bg-orange-400 text-white p-2 rounded-lg"
                     >
                       <Send className="w-5 h-5" />
                     </button>
@@ -246,7 +246,7 @@ export const MessagesPage: React.FC<MessagesPageProps> = ({
                   step="0.01"
                   value={offerData.price}
                   onChange={(e) => setOfferData({...offerData, price: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="text-gray-600 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400"
                 />
               </div>
 
@@ -256,7 +256,7 @@ export const MessagesPage: React.FC<MessagesPageProps> = ({
                   type="number"
                   value={offerData.quantity}
                   onChange={(e) => setOfferData({...offerData, quantity: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="text-gray-600 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-400"
                 />
               </div>
 

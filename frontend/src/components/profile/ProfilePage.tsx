@@ -65,14 +65,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                 )}
               </div>
               <div>
-                <h2 className="text-2xl font-bold">{user.name}</h2>
+                <h2 className="text-2xl text-gray-600 font-bold">{user.name}</h2>
                 <p className="text-gray-600">{user.email}</p>
                 <div className="flex items-center gap-4 mt-2">
                   {user.is_supplier && (
                     <>
                       <div className="flex items-center gap-1">
                         <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm">{user.rating?.toFixed(1) || 'N/A'}</span>
+                        <span className="text-sm text-gray-600">{user.rating?.toFixed(1) || 'N/A'}</span>
                       </div>
                       <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
                         {user.total_deliveries} deliveries

@@ -94,7 +94,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
               <div key={order.id} className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold">Order #{order.id}</h3>
+                    <h3 className="text-lg font-semibold text-gray-600">Order #{order.id}</h3>
                     <p className="text-gray-600">From {order.seller_name}</p>
                     <p className="text-sm text-gray-500">
                       {new Date(order.created_at).toLocaleDateString()}
@@ -117,7 +117,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
                         className="w-12 h-12 object-cover rounded"
                       />
                       <div className="flex-1">
-                        <p className="font-medium">{item.product_name}</p>
+                        <p className="font-medium text-gray-600">{item.product_name}</p>
                         <p className="text-sm text-gray-600">
                           Qty: {item.quantity} × ₹{item.unit_price} = ₹{(item.quantity * item.unit_price).toFixed(2)}
                         </p>
