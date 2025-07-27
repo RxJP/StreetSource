@@ -118,8 +118,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 <Plus className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-800">Add New Product</h3>
-                <p className="text-sm text-gray-600">List a new product for sale</p>
+                <h3 className="font-semibold text-gray-400">Add New Product</h3>
+                <p className="text-sm text-gray-300">List a new product for sale</p>
               </div>
             </div>
           </button>
@@ -133,8 +133,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 <Package className="w-6 h-6 text-blue-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-800">Manage Products</h3>
-                <p className="text-sm text-gray-600">Edit or remove your listings</p>
+                <h3 className="font-semibold text-gray-400">Manage Products</h3>
+                <p className="text-sm text-gray-300">Edit or remove your listings</p>
               </div>
             </div>
           </button>
@@ -148,8 +148,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 <ShoppingBag className="w-6 h-6 text-orange-600" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-800">View Orders</h3>
-                <p className="text-sm text-gray-600">Check pending and completed orders</p>
+                <h3 className="font-semibold text-gray-400">View Orders</h3>
+                <p className="text-sm text-gray-300">Check pending and completed orders</p>
               </div>
             </div>
           </button>

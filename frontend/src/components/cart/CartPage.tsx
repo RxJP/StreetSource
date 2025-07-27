@@ -52,7 +52,7 @@ export const CartPage: React.FC<CartPageProps> = ({
           <h2 className="text-2xl font-bold mb-4">Please log in to view your cart</h2>
           <button
             onClick={() => setShowAuthModal(true)}
-            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg"
+            className="bg-orange-500 hover:bg-orange-400 text-white px-6 py-3 rounded-lg"
           >
             Login
           </button>
@@ -89,7 +89,7 @@ export const CartPage: React.FC<CartPageProps> = ({
                     className="w-20 h-20 object-cover rounded-lg"
                   />
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold">{item.name}</h3>
+                    <h3 className="text-gray-700 text-lg font-semibold">{item.name}</h3>
                     <p className="text-gray-600">by {item.seller_name}</p>
                     <p className="text-lg font-bold text-orange-600">₹{item.price_per_unit}/unit</p>
                   </div>
@@ -100,7 +100,7 @@ export const CartPage: React.FC<CartPageProps> = ({
                     >
                       -
                     </button>
-                    <span className="w-12 text-center font-semibold">{item.quantity}</span>
+                    <span className="text-gray-600 w-12 text-center font-semibold">{item.quantity}</span>
                     <button
                       onClick={() => updateCartQuantity(item.product_id, item.quantity + 1)}
                       className="w-8 h-8 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300"
@@ -109,7 +109,7 @@ export const CartPage: React.FC<CartPageProps> = ({
                     </button>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold">₹{(item.price_per_unit * item.quantity).toFixed(2)}</p>
+                    <p className="text-gray-600 text-lg font-bold">₹{(item.price_per_unit * item.quantity).toFixed(2)}</p>
                     <button
                       onClick={() => removeFromCart(item.product_id)}
                       className="text-red-500 hover:text-red-700 mt-2"
@@ -123,7 +123,7 @@ export const CartPage: React.FC<CartPageProps> = ({
             
             <div className="bg-white rounded-lg shadow-md p-6">
               <div className="flex justify-between items-center mb-6">
-                <span className="text-2xl font-bold">Total: ₹{total.toFixed(2)}</span>
+                <span className="text-gray-800 text-2xl font-bold">Total: ₹{total.toFixed(2)}</span>
                 <button
                   onClick={handleCheckout}
                   className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg text-lg font-semibold"
