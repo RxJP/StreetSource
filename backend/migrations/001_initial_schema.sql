@@ -44,13 +44,29 @@ CREATE TABLE products (
                           image_url TEXT,
                           seller_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                           category_id INTEGER NOT NULL REFERENCES categories(id),
+                          category_name VARCHAR(100) NOT NULL, -- Added denormalized category name
                           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX idx_products_seller ON products(seller_id);
 CREATE INDEX idx_products_category ON products(category_id);
+CREATE INDEX idx_products_category_name ON products(category_name); -- Index for category name queries
 CREATE INDEX idx_products_name ON products(name);
 CREATE INDEX idx_products_stock ON products(stock_qty) WHERE stock_qty > 0;
+
+-- Create a trigger to automatically populate category_name when inserting/updating products
+CREATE OR REPLACE FUNCTION update_product_category_name()
+RETURNS TRIGGER AS $$
+BEGIN
+SELECT name INTO NEW.category_name FROM categories WHERE id = NEW.category_id;
+RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_product_category_name
+    BEFORE INSERT OR UPDATE OF category_id ON products
+    FOR EACH ROW
+    EXECUTE FUNCTION update_product_category_name();
 
 -- Orders table
 CREATE TABLE orders (
@@ -126,3 +142,24 @@ CREATE TABLE reviews (
 
 CREATE INDEX idx_reviews_seller ON reviews(seller_id);
 CREATE INDEX idx_reviews_order ON reviews(order_id);
+
+-- Create a trigger to keep category_name synchronized when categories table is updated
+CREATE OR REPLACE FUNCTION sync_product_category_names()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' THEN
+        -- Update all products that use this category
+UPDATE products SET category_name = NEW.name WHERE category_id = NEW.id;
+RETURN NEW;
+ELSIF TG_OP = 'DELETE' THEN
+        -- This shouldn't happen due to foreign key constraints, but just in case
+        RETURN OLD;
+END IF;
+RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_sync_product_category_names
+    AFTER UPDATE OF name OR DELETE ON categories
+    FOR EACH ROW
+    EXECUTE FUNCTION sync_product_category_names();

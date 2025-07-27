@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Plus, Package, DollarSign, Star, ShoppingBag } from 'lucide-react';
-import type { User } from '../../types';
+import { apiClient } from '../../services/api';
+import type { User, Order } from '../../types';
 
 interface SellerDashboardProps {
   user: User | null;
@@ -13,25 +14,64 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   setCurrentPage,
   setShowAuthModal
 }) => {
-  const mockStats = {
-    activeListings: 12,
-    totalSales: 45670,
-    averageRating: 4.7,
-    totalOrders: 156
-  };
+  const [pendingOrders, setPendingOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    activeListings: 0,
+    totalSales: 0,
+    averageRating: 0,
+    totalOrders: 0
+  });
 
-  const mockPendingOrders = [
-    {
-      id: '1',
-      buyer_name: 'Street Food Corner',
-      buyer_phone: '+91 98765 43210',
-      total_price: 850.00,
-      created_at: '2024-01-20T09:30:00Z',
-      items: [
-        { product_name: 'Premium Basmati Rice', quantity: 10, unit_price: 85.00 }
-      ]
+  useEffect(() => {
+    const loadData = async () => {
+      if (!user || !user.is_supplier) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Load pending orders
+        const ordersResponse = await apiClient.getPendingOrders();
+        setPendingOrders(ordersResponse.orders);
+
+        // Load products to get active listings count
+        const productsResponse = await apiClient.getProducts();
+        const myProducts = productsResponse.products.filter(p => p.seller_id === user.id);
+        
+        // Calculate stats
+        setStats({
+          activeListings: myProducts.length,
+          totalSales: 45670, // Mock data - would be calculated from orders
+          averageRating: user.rating || 4.7,
+          totalOrders: user.total_deliveries || 156
+        });
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user]);
+
+  const handleOrderAction = async (orderId: string, action: 'shipped' | 'delivered') => {
+    try {
+      await apiClient.updateOrderStatus(orderId, action);
+      // Update local state
+      setPendingOrders(prev => 
+        prev.map(order => 
+          order.id === orderId 
+            ? { ...order, status: action }
+            : order
+        ).filter(order => order.status === 'pending')
+      );
+      alert(`Order ${action} successfully!`);
+    } catch (error: any) {
+      alert(error.message || `Failed to update order status`);
     }
-  ];
+  };
 
   if (!user || !user.is_supplier) {
     return (
@@ -45,6 +85,17 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           >
             Login as Supplier
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+          <span className="text-lg">Loading dashboard...</span>
         </div>
       </div>
     );
@@ -70,7 +121,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Active Products</p>
-                <p className="text-2xl font-bold text-gray-900">{mockStats.activeListings}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.activeListings}</p>
               </div>
               <Package className="w-8 h-8 text-blue-500" />
             </div>
@@ -80,7 +131,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Sales</p>
-                <p className="text-2xl font-bold text-gray-900">₹{mockStats.totalSales.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">₹{stats.totalSales.toLocaleString()}</p>
               </div>
               <DollarSign className="w-8 h-8 text-green-500" />
             </div>
@@ -90,7 +141,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Average Rating</p>
-                <p className="text-2xl font-bold text-gray-900">{mockStats.averageRating}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.averageRating.toFixed(1)}</p>
               </div>
               <Star className="w-8 h-8 text-yellow-500" />
             </div>
@@ -100,7 +151,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Orders</p>
-                <p className="text-2xl font-bold text-gray-900">{mockStats.totalOrders}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalOrders}</p>
               </div>
               <ShoppingBag className="w-8 h-8 text-purple-500" />
             </div>
@@ -161,29 +212,31 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             <h2 className="text-xl font-semibold text-gray-800">Pending Orders</h2>
           </div>
           <div className="p-6">
-            {mockPendingOrders.length === 0 ? (
+            {pendingOrders.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No pending orders</p>
             ) : (
               <div className="space-y-4">
-                {mockPendingOrders.map(order => (
+                {pendingOrders.map(order => (
                   <div key={order.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h3 className="font-semibold text-gray-800">Order #{order.id}</h3>
                         <p className="text-sm text-gray-600">
-                          From: {order.buyer_name}
+                          From: {order.buyer_name || 'Unknown Buyer'}
                         </p>
-                        <p className="text-sm text-gray-600">
-                          Phone: {order.buyer_phone}
-                        </p>
+                        {order.buyer_phone && (
+                          <p className="text-sm text-gray-600">
+                            Phone: {order.buyer_phone}
+                          </p>
+                        )}
                         <p className="text-sm text-gray-500">
                           {new Date(order.created_at).toLocaleDateString()}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-lg font-bold text-gray-800">₹{order.total_price}</p>
+                        <p className="text-lg font-bold text-gray-800">₹{order.total_price.toFixed(2)}</p>
                         <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
-                          Pending
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                         </span>
                       </div>
                     </div>
@@ -202,11 +255,17 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                     </div>
                     
                     <div className="flex gap-2 mt-4">
-                      <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
-                        Accept Order
+                      <button 
+                        onClick={() => handleOrderAction(order.id, 'shipped')}
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm"
+                      >
+                        Mark as Shipped
                       </button>
-                      <button className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm">
-                        Decline
+                      <button 
+                        onClick={() => handleOrderAction(order.id, 'delivered')}
+                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm"
+                      >
+                        Mark as Delivered
                       </button>
                     </div>
                   </div>

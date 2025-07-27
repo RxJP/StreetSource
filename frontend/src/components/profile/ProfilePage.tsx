@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { User as UserIcon, Star, Edit } from 'lucide-react';
+import { User as UserIcon, Star, Edit, Upload } from 'lucide-react';
+import { apiClient } from '../../services/api';
 import type { User } from '../../types';
 
 interface ProfilePageProps {
@@ -19,13 +20,46 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
     profile_image_url: user?.profile_image_url || ''
   });
   const [isEditing, setIsEditing] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleSave = () => {
-    // Mock profile update
-    if (user) {
+  const handleSave = async () => {
+    if (!user) return;
+
+    try {
+      await apiClient.updateUserProfile(profileData);
       setUser(prev => prev ? { ...prev, ...profileData } : null);
       setIsEditing(false);
       alert('Profile updated successfully!');
+    } catch (error: any) {
+      alert(error.message || 'Failed to update profile');
+    }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const response = await apiClient.uploadProfileImage(file);
+      setProfileData(prev => ({ ...prev, profile_image_url: response.image_url }));
+      alert('Image uploaded successfully!');
+    } catch (error: any) {
+      alert(error.message || 'Failed to upload image');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -53,7 +87,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center">
+              <div className="relative w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center">
                 {profileData.profile_image_url ? (
                   <img 
                     src={profileData.profile_image_url} 
@@ -62,6 +96,18 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   />
                 ) : (
                   <UserIcon className="w-10 h-10 text-gray-500" />
+                )}
+                {isEditing && (
+                  <label className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer opacity-0 hover:opacity-100 transition-opacity">
+                    <Upload className="w-6 h-6 text-white" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={isUploading}
+                      className="hidden"
+                    />
+                  </label>
                 )}
               </div>
               <div>
@@ -96,6 +142,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
             </button>
           </div>
 
+          {isUploading && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-blue-800">Uploading image...</p>
+            </div>
+          )}
+
           {isEditing ? (
             <div className="space-y-4">
               <div>
@@ -104,7 +156,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   type="text"
                   value={profileData.name}
                   onChange={(e) => setProfileData({...profileData, name: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-800"
                 />
               </div>
               <div>
@@ -113,7 +165,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   type="tel"
                   value={profileData.phone}
                   onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-800"
                 />
               </div>
               <div>
@@ -122,7 +174,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   type="url"
                   value={profileData.profile_image_url}
                   onChange={(e) => setProfileData({...profileData, profile_image_url: e.target.value})}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-800"
                 />
               </div>
               <button

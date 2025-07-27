@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Package } from 'lucide-react';
 
 // Components
@@ -15,75 +15,121 @@ import { SellerDashboard } from './components/seller/SellerDashboard';
 import { AddProductPage } from './components/seller/AddProductPage';
 import { MyProductsPage } from './components/seller/MyProductsPage';
 
-// Hooks and Data
+// Hooks and Services
 import { useAuth } from './hooks/useAuth';
-import { mockProducts } from './data/mockData';
+import { apiClient } from './services/api';
 
 // Types
-import type { Product, CartItem, Order } from './types';
+import type { Product, CartItem } from './types';
 
 const StreetSourceApp: React.FC = () => {
-  const { user, setUser, handleLogin, handleRegister, handleLogout } = useAuth();
+  const { user, setUser, loading, handleLogin, handleRegister, handleLogout } = useAuth();
   
   const [currentPage, setCurrentPage] = useState('home');
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [sortBy, setSortBy] = useState('');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [orders, setOrders] = useState<Order[]>([]);
+
+  // Load products on app start
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const response = await apiClient.getProducts();
+        setProducts(response.products);
+      } catch (error) {
+        console.error('Failed to load products:', error);
+      }
+    };
+
+    loadProducts();
+  }, []);
+
+  // Load cart when user logs in
+  useEffect(() => {
+    const loadCart = async () => {
+      if (user) {
+        try {
+          const response = await apiClient.getCart();
+          setCart(response.items);
+        } catch (error) {
+          console.error('Failed to load cart:', error);
+          setCart([]);
+        }
+      } else {
+        setCart([]);
+      }
+    };
+
+    loadCart();
+  }, [user]);
 
   // Cart Functions
-  const addToCart = (product: Product, quantity = 1) => {
+  const addToCart = async (product: Product, quantity = 1) => {
     if (!user) {
       setShowAuthModal(true);
       return;
     }
     
-    setCart(prev => {
-      const existing = prev.find(item => item.product_id === product.id);
-      if (existing) {
-        return prev.map(item =>
-          item.product_id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      }
-      return [...prev, {
-        product_id: product.id,
-        name: product.name,
-        price_per_unit: product.price_per_unit,
-        quantity: quantity,
-        image_url: product.image_url,
-        seller_name: product.seller_name,
-        available_stock: product.stock_qty
-      }];
-    });
+    try {
+      await apiClient.addToCart(product.id, quantity);
+      // Reload cart after adding item
+      const response = await apiClient.getCart();
+      setCart(response.items);
+    } catch (error: any) {
+      alert(error.message || 'Failed to add item to cart');
+    }
   };
 
-  const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.product_id !== productId));
+  const removeFromCart = async (productId: string) => {
+    try {
+      await apiClient.removeFromCart(productId);
+      // Reload cart after removing item
+      const response = await apiClient.getCart();
+      setCart(response.items);
+    } catch (error: any) {
+      alert(error.message || 'Failed to remove item from cart');
+    }
   };
 
-  const updateCartQuantity = (productId: string, quantity: number) => {
+  const updateCartQuantity = async (productId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(productId);
+      await removeFromCart(productId);
       return;
     }
-    setCart(prev => prev.map(item =>
-      item.product_id === productId
-        ? { ...item, quantity: quantity }
-        : item
-    ));
+    
+    try {
+      // Remove all items first, then add the new quantity
+      await apiClient.removeFromCart(productId);
+      await apiClient.addToCart(productId, quantity);
+      // Reload cart
+      const response = await apiClient.getCart();
+      setCart(response.items);
+    } catch (error: any) {
+      alert(error.message || 'Failed to update cart');
+    }
   };
 
-  const onLogout = () => {
-    handleLogout();
+  const onLogout = async () => {
+    await handleLogout();
     setCurrentPage('home');
     setCart([]);
   };
+
+  // Show loading spinner while checking auth status
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <Package className="w-8 h-8 text-orange-400 animate-spin" />
+          <span className="text-lg">Loading...</span>
+        </div>
+      </div>
+    );
+  }
 
   const renderCurrentPage = () => {
     const commonProps = {
@@ -109,6 +155,7 @@ const StreetSourceApp: React.FC = () => {
           <ProductsPage
             {...commonProps}
             products={products}
+            setProducts={setProducts}
             searchQuery={searchQuery}
             selectedCategory={selectedCategory}
             setSelectedCategory={setSelectedCategory}
@@ -125,7 +172,6 @@ const StreetSourceApp: React.FC = () => {
             removeFromCart={removeFromCart}
             updateCartQuantity={updateCartQuantity}
             setCart={setCart}
-            setOrders={setOrders}
           />
         );
       case 'messages':
@@ -186,8 +232,22 @@ const StreetSourceApp: React.FC = () => {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onLogin={async (credentials) => { await handleLogin(credentials); }}
-        onRegister={async (userData) => { await handleRegister(userData); }}
+        onLogin={async (credentials) => { 
+          try {
+            await handleLogin(credentials);
+            setShowAuthModal(false);
+          } catch (error: any) {
+            alert(error.message);
+          }
+        }}
+        onRegister={async (userData) => { 
+          try {
+            await handleRegister(userData);
+            setShowAuthModal(false);
+          } catch (error: any) {
+            alert(error.message);
+          }
+        }}
       />
       
       {/* Footer */}

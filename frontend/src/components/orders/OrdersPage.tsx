@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Package } from 'lucide-react';
-import type { User } from '../../types';
+import { apiClient } from '../../services/api';
+import type { User, Order } from '../../types';
 
 interface OrdersPageProps {
   user: User | null;
@@ -13,38 +14,28 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
   setCurrentPage,
   setShowAuthModal
 }) => {
-  const mockOrders = [
-    {
-      id: '1',
-      seller_name: 'Rajesh Kumar',
-      status: 'delivered' as const,
-      total_price: 427.50,
-      created_at: '2024-01-15T10:30:00Z',
-      items: [
-        {
-          product_name: 'Premium Basmati Rice',
-          quantity: 5,
-          unit_price: 85.50,
-          image_url: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400'
-        }
-      ]
-    },
-    {
-      id: '2',
-      seller_name: 'Spice Master',
-      status: 'shipped' as const,
-      total_price: 360.00,
-      created_at: '2024-01-18T14:20:00Z',
-      items: [
-        {
-          product_name: 'Garam Masala Powder',
-          quantity: 2,
-          unit_price: 180.00,
-          image_url: 'https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400'
-        }
-      ]
-    }
-  ];
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await apiClient.getOrders();
+        setOrders(response.orders);
+      } catch (error) {
+        console.error('Failed to load orders:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadOrders();
+  }, [user]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -71,12 +62,23 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
     );
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+          <span className="text-lg">Loading orders...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
         <h1 className="text-3xl font-bold mb-8 text-gray-800">My Orders</h1>
         
-        {mockOrders.length === 0 ? (
+        {orders.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-12 text-center">
             <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-600 mb-2">No orders yet</h2>
@@ -90,7 +92,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
           </div>
         ) : (
           <div className="space-y-6">
-            {mockOrders.map(order => (
+            {orders.map(order => (
               <div key={order.id} className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>
@@ -104,7 +106,7 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
                     <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
                       {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                     </span>
-                    <p className="text-lg font-bold text-gray-800 mt-2">₹{order.total_price}</p>
+                    <p className="text-lg font-bold text-gray-800 mt-2">₹{order.total_price.toFixed(2)}</p>
                   </div>
                 </div>
                 
@@ -112,14 +114,14 @@ export const OrdersPage: React.FC<OrdersPageProps> = ({
                   {order.items.map((item, index) => (
                     <div key={index} className="flex items-center gap-4 mb-2">
                       <img 
-                        src={item.image_url} 
+                        src={item.image_url || 'https://via.placeholder.com/48'} 
                         alt={item.product_name}
                         className="w-12 h-12 object-cover rounded"
                       />
                       <div className="flex-1">
                         <p className="font-medium text-gray-600">{item.product_name}</p>
                         <p className="text-sm text-gray-600">
-                          Qty: {item.quantity} × ₹{item.unit_price} = ₹{(item.quantity * item.unit_price).toFixed(2)}
+                          Qty: {item.quantity} × ₹{item.unit_price.toFixed(2)} = ₹{(item.quantity * item.unit_price).toFixed(2)}
                         </p>
                       </div>
                     </div>

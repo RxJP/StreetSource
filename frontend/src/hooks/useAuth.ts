@@ -1,49 +1,71 @@
-import { useState } from 'react';
+// src/hooks/useAuth.ts
+import { useState, useEffect } from 'react';
+import { apiClient } from '../services/api';
 import type { User, AuthFormData } from '../types';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check if user is already logged in on app start
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      try {
+        const userData = await apiClient.getUserProfile();
+        setUser(userData);
+      } catch (error) {
+        // User is not logged in
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuthStatus();
+  }, []);
 
   const handleLogin = async (credentials: AuthFormData) => {
-    // Mock login - replace with actual API call
-    const mockUser: User = {
-      id: '1',
-      email: credentials.email,
-      name: credentials.email.split('@')[0],
-      is_supplier: credentials.email.includes('supplier'),
-      rating: 4.7,
-      total_deliveries: 45,
-      profile_image_url: undefined
-    };
-    setUser(mockUser);
-    return mockUser;
+    try {
+      const response = await apiClient.login(credentials);
+      setUser(response.user);
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Login failed');
+    }
   };
 
   const handleRegister = async (userData: AuthFormData) => {
-    // Mock registration - replace with actual API call
-    const newUser: User = {
-      id: Date.now().toString(),
-      email: userData.email,
-      name: userData.name || userData.email.split('@')[0],
-      phone: userData.phone,
-      is_supplier: userData.is_supplier || false,
-      rating: undefined,
-      total_deliveries: 0,
-      profile_image_url: undefined
-    };
-    setUser(newUser);
-    return newUser;
+    try {
+      const response = await apiClient.register(userData);
+      // After successful registration, log the user in
+      await handleLogin({
+        email: userData.email,
+        password: userData.password,
+        is_supplier: userData.is_supplier,
+      });
+      return response;
+    } catch (error: any) {
+      throw new Error(error.message || 'Registration failed');
+    }
   };
 
-  const handleLogout = () => {
-    setUser(null);
+  const handleLogout = async () => {
+    try {
+      await apiClient.logout();
+      setUser(null);
+    } catch (error) {
+      console.error('Logout failed:', error);
+      // Still clear user state even if logout API call fails
+      setUser(null);
+    }
   };
 
   return {
     user,
     setUser,
+    loading,
     handleLogin,
     handleRegister,
-    handleLogout
+    handleLogout,
   };
 };

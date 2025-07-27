@@ -241,3 +241,10 @@ pub struct WsMessage {
     pub sender_id: Uuid,
     pub sent_at: DateTime<Utc>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CategoryWithCount {
+    pub id: i32,
+    pub name: String,
+    pub product_count: i64,
+}

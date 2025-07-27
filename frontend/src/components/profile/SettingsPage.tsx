@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { apiClient } from "../../services/api";
 import type { User } from "../../types";
 
 interface SettingsPageProps {
@@ -15,20 +16,45 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const [settings, setSettings] = useState({
     become_supplier: user?.is_supplier || false,
   });
+  const [loading, setLoading] = useState(true);
 
-  const handleToggleSupplier = () => {
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await apiClient.getUserSettings();
+        setSettings({ become_supplier: response.is_supplier });
+      } catch (error) {
+        console.error('Failed to load settings:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, [user]);
+
+  const handleToggleSupplier = async () => {
+    if (!user) return;
+
     const newSupplierStatus = !settings.become_supplier;
-    setSettings({ become_supplier: newSupplierStatus });
-    if (user) {
-      setUser((prev) =>
-        prev ? { ...prev, is_supplier: newSupplierStatus } : null
+    
+    try {
+      await apiClient.updateUserSettings({ become_supplier: newSupplierStatus });
+      setSettings({ become_supplier: newSupplierStatus });
+      setUser(prev => prev ? { ...prev, is_supplier: newSupplierStatus } : null);
+      alert(
+        `Successfully ${
+          newSupplierStatus ? "enabled" : "disabled"
+        } supplier mode!`
       );
+    } catch (error: any) {
+      alert(error.message || 'Failed to update settings');
     }
-    alert(
-      `Successfully ${
-        newSupplierStatus ? "enabled" : "disabled"
-      } supplier mode!`
-    );
   };
 
   if (!user) {
@@ -40,10 +66,21 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
           </h2>
           <button
             onClick={() => setShowAuthModal(true)}
-            className="bg-orange-500 hover:bg-orange-600 text-gray-600 px-6 py-3 rounded-lg"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg"
           >
             Login
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+          <span className="text-lg">Loading settings...</span>
         </div>
       </div>
     );
@@ -116,7 +153,10 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
               <h3 className="text-lg text-gray-600 font-semibold mb-4">
                 Danger Zone
               </h3>
-              <button className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+              <button 
+                onClick={() => alert('Account deletion is not implemented in this demo')}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+              >
                 Delete Account
               </button>
             </div>

@@ -18,12 +18,13 @@ mod handlers {
     pub mod message_handlers;
     pub mod upload_handlers;
     pub mod health_handler;
+    pub mod categories_handlers;
 }
 mod errors;
 mod ws;
 mod utils;
 
-use handlers::{auth_handlers, user_handlers, product_handlers, cart_handlers, order_handlers, message_handlers};
+use handlers::{auth_handlers, user_handlers, product_handlers, cart_handlers, order_handlers, message_handlers, categories_handlers};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -75,6 +76,9 @@ async fn main() -> std::io::Result<()> {
                     .route("/user/profile", web::put().to(user_handlers::update_profile))
                     .route("/user/settings", web::get().to(user_handlers::get_settings))
                     .route("/user/settings", web::put().to(user_handlers::update_settings))
+                    // Category routes
+                    .route("/categories", web::get().to(categories_handlers::get_categories))
+                    .route("/categories/{id}", web::get().to(categories_handlers::get_category_by_id))
                     // Product routes
                     .route("/products", web::get().to(product_handlers::list_products))
                     .route("/products", web::post().to(product_handlers::create_product))

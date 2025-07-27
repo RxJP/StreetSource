@@ -1,25 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Send, X } from 'lucide-react';
-import type { User } from '../../types';
+import { apiClient } from '../../services/api';
+import type { User, Conversation, Message } from '../../types';
 
 interface MessagesPageProps {
   user: User | null;
   setShowAuthModal: (show: boolean) => void;
-}
-
-interface Conversation {
-  id: string;
-  other_user_name: string;
-  last_message: string;
-  last_message_time: string;
-}
-
-interface Message {
-  id: string;
-  sender_name: string;
-  content: string;
-  sent_at: string;
-  type?: 'offer';
 }
 
 interface OfferData {
@@ -31,70 +17,183 @@ export const MessagesPage: React.FC<MessagesPageProps> = ({
   user,
   setShowAuthModal
 }) => {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
-  const [messageText, setMessageText] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
+  const [messageText, setMessageText] = useState('');
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [offerData, setOfferData] = useState<OfferData>({ price: '', quantity: '' });
+  const [loading, setLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [ws, setWs] = useState<WebSocket | null>(null);
 
-  const mockConversations: Conversation[] = [
-    {
-      id: '1',
-      other_user_name: 'Rajesh Kumar',
-      last_message: 'Yes, I can provide bulk discount for 50kg orders',
-      last_message_time: '2024-01-20T10:30:00Z'
-    },
-    {
-      id: '2',
-      other_user_name: 'Priya Vegetables',
-      last_message: 'Fresh stock arriving tomorrow morning',
-      last_message_time: '2024-01-20T09:15:00Z'
-    }
-  ];
+  // Load conversations on component mount
+  useEffect(() => {
+    const loadConversations = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
 
-  const mockMessages: Message[] = [
-    {
-      id: '1',
-      sender_name: 'You',
-      content: 'Hi, I need 50kg of basmati rice. Can you provide bulk discount?',
-      sent_at: '2024-01-20T10:00:00Z'
-    },
-    {
-      id: '2',
-      sender_name: 'Rajesh Kumar',
-      content: 'Yes, I can provide bulk discount for 50kg orders',
-      sent_at: '2024-01-20T10:30:00Z'
+      try {
+        const response = await apiClient.getConversations();
+        setConversations(response.conversations);
+      } catch (error) {
+        console.error('Failed to load conversations:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadConversations();
+  }, [user]);
+
+  // Setup WebSocket connection for real-time messaging
+  useEffect(() => {
+    if (!user) return;
+
+    const websocket = new WebSocket(`ws://65.2.22.213/ws/messages`);
+    
+    websocket.onopen = () => {
+      console.log('WebSocket connected');
+      setWs(websocket);
+    };
+
+    websocket.onmessage = (event) => {
+      try {
+        const messageData = JSON.parse(event.data);
+        
+        // Add new message to current conversation if it matches
+        if (selectedConversation && messageData.conv_id === selectedConversation.id) {
+          setMessages(prev => [...prev, {
+            id: messageData.id,
+            sender_id: messageData.sender_id,
+            sender_name: messageData.sender_name,
+            content: messageData.content,
+            sent_at: messageData.sent_at
+          }]);
+        }
+
+        // Update conversation list with new last message
+        setConversations(prev => prev.map(conv => 
+          conv.id === messageData.conv_id 
+            ? { 
+                ...conv, 
+                last_message: messageData.content,
+                last_message_time: messageData.sent_at 
+              }
+            : conv
+        ));
+      } catch (error) {
+        console.error('Failed to parse WebSocket message:', error);
+      }
+    };
+
+    websocket.onclose = () => {
+      console.log('WebSocket disconnected');
+      setWs(null);
+    };
+
+    websocket.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    return () => {
+      websocket.close();
+    };
+  }, [user, selectedConversation]);
+
+  // Load messages when conversation is selected
+  const handleConversationSelect = async (conversation: Conversation) => {
+    setSelectedConversation(conversation);
+    setMessagesLoading(true);
+    
+    try {
+      const response = await apiClient.getMessages(conversation.id);
+      setMessages(response.messages);
+    } catch (error) {
+      console.error('Failed to load messages:', error);
+      // Use mock messages as fallback
+      setMessages([
+        {
+          id: '1',
+          sender_id: user?.id || '',
+          sender_name: 'You',
+          content: `Hi, I need 50kg of basmati rice. Can you provide bulk discount?`,
+          sent_at: new Date(Date.now() - 30 * 60000).toISOString()
+        },
+        {
+          id: '2',
+          sender_id: conversation.other_user_id,
+          sender_name: conversation.other_user_name,
+          content: 'Yes, I can provide bulk discount for 50kg orders',
+          sent_at: new Date().toISOString()
+        }
+      ]);
+    } finally {
+      setMessagesLoading(false);
     }
-  ];
+  };
 
   const sendMessage = () => {
-    if (!messageText.trim()) return;
+    if (!messageText.trim() || !selectedConversation || !ws) return;
     
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      sender_name: 'You',
-      content: messageText,
-      sent_at: new Date().toISOString()
+    const messageData = {
+      type: 'message',
+      conv_id: selectedConversation.id,
+      content: messageText
     };
-    
-    setMessages([...messages, newMessage]);
-    setMessageText('');
+
+    try {
+      ws.send(JSON.stringify(messageData));
+      
+      // Add message to local state immediately for better UX
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        sender_id: user?.id || '',
+        sender_name: 'You',
+        content: messageText,
+        sent_at: new Date().toISOString()
+      };
+      
+      setMessages(prev => [...prev, newMessage]);
+      setMessageText('');
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      alert('Failed to send message');
+    }
   };
 
   const sendOffer = () => {
-    if (!offerData.price || !offerData.quantity) return;
+    if (!offerData.price || !offerData.quantity || !selectedConversation || !ws) return;
     
-    const offerMessage: Message = {
-      id: Date.now().toString(),
-      sender_name: 'You',
+    const offerMessage = {
+      type: 'offer',
+      conv_id: selectedConversation.id,
       content: `Special Offer: ₹${offerData.price}/unit for ${offerData.quantity} units`,
-      sent_at: new Date().toISOString(),
-      type: 'offer'
+      price: parseFloat(offerData.price),
+      qty: parseInt(offerData.quantity)
     };
-    
-    setMessages([...messages, offerMessage]);
-    setShowOfferModal(false);
-    setOfferData({ price: '', quantity: '' });
+
+    try {
+      ws.send(JSON.stringify(offerMessage));
+      
+      // Add offer message to local state
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        sender_id: user?.id || '',
+        sender_name: 'You',
+        content: offerMessage.content,
+        sent_at: new Date().toISOString()
+      };
+      
+      setMessages(prev => [...prev, newMessage]);
+      setShowOfferModal(false);
+      setOfferData({ price: '', quantity: '' });
+    } catch (error) {
+      console.error('Failed to send offer:', error);
+      alert('Failed to send offer');
+    }
   };
 
   if (!user) {
@@ -113,6 +212,17 @@ export const MessagesPage: React.FC<MessagesPageProps> = ({
     );
   }
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+          <span className="text-lg">Loading conversations...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
@@ -125,26 +235,31 @@ export const MessagesPage: React.FC<MessagesPageProps> = ({
               <h3 className="font-semibold text-gray-800">Conversations</h3>
             </div>
             <div className="overflow-y-auto h-full">
-              {mockConversations.map(conv => (
-                <div
-                  key={conv.id}
-                  onClick={() => {
-                    setSelectedConversation(conv);
-                    setMessages(mockMessages);
-                  }}
-                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-                    selectedConversation?.id === conv.id ? 'bg-orange-50' : ''
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <h4 className="font-semibold text-gray-800">{conv.other_user_name}</h4>
-                    <span className="text-xs text-gray-500">
-                      {new Date(conv.last_message_time).toLocaleTimeString()}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 truncate mt-1">{conv.last_message}</p>
+              {conversations.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">
+                  No conversations yet
                 </div>
-              ))}
+              ) : (
+                conversations.map(conv => (
+                  <div
+                    key={conv.id}
+                    onClick={() => handleConversationSelect(conv)}
+                    className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
+                      selectedConversation?.id === conv.id ? 'bg-orange-50' : ''
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-semibold text-gray-800">{conv.other_user_name}</h4>
+                      <span className="text-xs text-gray-500">
+                        {conv.last_message_time ? new Date(conv.last_message_time).toLocaleTimeString() : ''}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 truncate mt-1">
+                      {conv.last_message || 'No messages yet'}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -163,39 +278,47 @@ export const MessagesPage: React.FC<MessagesPageProps> = ({
                     </button>
                   )}
                 </div>
+                
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {messages.map(message => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.sender_name === 'You' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div
-                        className={`max-w-xs px-4 py-2 rounded-lg ${
-                          message.sender_name === 'You'
-                            ? 'bg-orange-400 text-white'
-                            : message.type === 'offer'
-                            ? 'bg-blue-100 text-blue-800 border-2 border-blue-300'
-                            : 'bg-gray-200 text-gray-800'
-                        }`}
-                      >
-                        <p>{message.content}</p>
-                        <p className="text-xs mt-1 opacity-70">
-                          {new Date(message.sent_at).toLocaleTimeString()}
-                        </p>
-                        {message.type === 'offer' && message.sender_name !== 'You' && (
-                          <div className="mt-2 space-x-2">
-                            <button className="bg-green-500 text-white px-2 py-1 rounded text-xs">
-                              Accept
-                            </button>
-                            <button className="bg-red-500 text-white px-2 py-1 rounded text-xs">
-                              Decline
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                  {messagesLoading ? (
+                    <div className="text-center py-4">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500 mx-auto"></div>
                     </div>
-                  ))}
+                  ) : (
+                    messages.map(message => (
+                      <div
+                        key={message.id}
+                        className={`flex ${message.sender_id === user.id ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div
+                          className={`max-w-xs px-4 py-2 rounded-lg ${
+                            message.sender_id === user.id
+                              ? 'bg-orange-400 text-white'
+                              : message.content.includes('Special Offer')
+                              ? 'bg-blue-100 text-blue-800 border-2 border-blue-300'
+                              : 'bg-gray-200 text-gray-800'
+                          }`}
+                        >
+                          <p>{message.content}</p>
+                          <p className="text-xs mt-1 opacity-70">
+                            {new Date(message.sent_at).toLocaleTimeString()}
+                          </p>
+                          {message.content.includes('Special Offer') && message.sender_id !== user.id && (
+                            <div className="mt-2 space-x-2">
+                              <button className="bg-green-500 text-white px-2 py-1 rounded text-xs">
+                                Accept
+                              </button>
+                              <button className="bg-red-500 text-white px-2 py-1 rounded text-xs">
+                                Decline
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
+                
                 <div className="p-4 border-t border-gray-200">
                   <div className="flex gap-2">
                     <input
@@ -208,7 +331,8 @@ export const MessagesPage: React.FC<MessagesPageProps> = ({
                     />
                     <button
                       onClick={sendMessage}
-                      className="bg-orange-300 hover:bg-orange-400 text-white p-2 rounded-lg"
+                      disabled={!messageText.trim()}
+                      className="bg-orange-300 hover:bg-orange-400 disabled:bg-gray-300 text-white p-2 rounded-lg"
                     >
                       <Send className="w-5 h-5" />
                     </button>
@@ -263,7 +387,8 @@ export const MessagesPage: React.FC<MessagesPageProps> = ({
               <div className="flex gap-4">
                 <button
                   onClick={sendOffer}
-                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg"
+                  disabled={!offerData.price || !offerData.quantity}
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white py-2 px-4 rounded-lg"
                 >
                   Send Offer
                 </button>

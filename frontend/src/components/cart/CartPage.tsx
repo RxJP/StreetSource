@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ShoppingCart, Trash2 } from 'lucide-react';
-import type { User, CartItem, Order } from '../../types';
+import { apiClient } from '../../services/api';
+import type { User, CartItem } from '../../types';
 
 interface CartPageProps {
   user: User | null;
@@ -8,7 +9,6 @@ interface CartPageProps {
   removeFromCart: (productId: string) => void;
   updateCartQuantity: (productId: string, quantity: number) => void;
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
-  setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
   setCurrentPage: (page: string) => void;
   setShowAuthModal: (show: boolean) => void;
 }
@@ -19,30 +19,30 @@ export const CartPage: React.FC<CartPageProps> = ({
   removeFromCart,
   updateCartQuantity,
   setCart,
-  setOrders,
   setCurrentPage,
   setShowAuthModal
 }) => {
-  const total = cart.reduce((sum, item) => sum + (item.price_per_unit * item.quantity), 0);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const handleCheckout = () => {
-    // Mock checkout
-    setOrders(prev => [...prev, {
-      id: Date.now().toString(),
-      seller_name: 'Various Sellers', // In real app, group by seller
-      status: 'pending',
-      total_price: total,
-      created_at: new Date().toISOString(),
-      items: cart.map(item => ({
-        product_name: item.name,
-        quantity: item.quantity,
-        unit_price: item.price_per_unit,
-        image_url: item.image_url
-      }))
-    }]);
-    setCart([]);
-    alert('Order placed successfully!');
-    setCurrentPage('orders');
+  const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
+
+  const handleCheckout = async () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    setIsCheckingOut(true);
+    try {
+      const response = await apiClient.createOrder();
+      setCart([]);
+      alert(`Order placed successfully! Order IDs: ${response.order_ids.join(', ')}`);
+      setCurrentPage('orders');
+    } catch (error: any) {
+      alert(error.message || 'Failed to place order');
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
   if (!user) {
@@ -84,7 +84,7 @@ export const CartPage: React.FC<CartPageProps> = ({
               <div key={item.product_id} className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex items-center gap-4">
                   <img 
-                    src={item.image_url} 
+                    src={item.image_url || 'https://via.placeholder.com/80'} 
                     alt={item.name}
                     className="w-20 h-20 object-cover rounded-lg"
                   />
@@ -92,6 +92,7 @@ export const CartPage: React.FC<CartPageProps> = ({
                     <h3 className="text-gray-700 text-lg font-semibold">{item.name}</h3>
                     <p className="text-gray-600">by {item.seller_name}</p>
                     <p className="text-lg font-bold text-orange-600">₹{item.price_per_unit}/unit</p>
+                    <p className="text-sm text-gray-500">Available: {item.available_stock}</p>
                   </div>
                   <div className="flex items-center gap-3">
                     <button
@@ -103,13 +104,14 @@ export const CartPage: React.FC<CartPageProps> = ({
                     <span className="text-gray-600 w-12 text-center font-semibold">{item.quantity}</span>
                     <button
                       onClick={() => updateCartQuantity(item.product_id, item.quantity + 1)}
-                      className="w-8 h-8 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300"
+                      disabled={item.quantity >= item.available_stock}
+                      className="w-8 h-8 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       +
                     </button>
                   </div>
                   <div className="text-right">
-                    <p className="text-gray-600 text-lg font-bold">₹{(item.price_per_unit * item.quantity).toFixed(2)}</p>
+                    <p className="text-gray-600 text-lg font-bold">₹{item.subtotal.toFixed(2)}</p>
                     <button
                       onClick={() => removeFromCart(item.product_id)}
                       className="text-red-500 hover:text-red-700 mt-2"
@@ -126,9 +128,10 @@ export const CartPage: React.FC<CartPageProps> = ({
                 <span className="text-gray-800 text-2xl font-bold">Total: ₹{total.toFixed(2)}</span>
                 <button
                   onClick={handleCheckout}
-                  className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg text-lg font-semibold"
+                  disabled={isCheckingOut}
+                  className="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 text-white px-8 py-3 rounded-lg text-lg font-semibold"
                 >
-                  Checkout
+                  {isCheckingOut ? 'Processing...' : 'Checkout'}
                 </button>
               </div>
             </div>
