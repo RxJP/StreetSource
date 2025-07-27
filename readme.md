@@ -2,7 +2,7 @@
 
 StreetSource is a full-stack online marketplace connecting vendors (buyers) with suppliers (sellers) of commodities. Built with React frontend and Rust/Actix-web backend, hosted on AWS.
 
-##Demo Video
+## Demo Video
 https://streetsource-bucket.s3.ap-south-1.amazonaws.com/demo_vide.mp4
 
 ## 🚀 Features
